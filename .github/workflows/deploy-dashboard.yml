@@ -1,0 +1,89 @@
+name: Deploy Benchmark Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      benchmark_ref:
+        description: optagent-benchmarks ref to sync
+        required: false
+        default: main
+  repository_dispatch:
+    types:
+      - benchmark-results-updated
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: cloudflare-pages-benchmark-dashboard
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build And Deploy Dashboard
+    runs-on: ubuntu-latest
+    env:
+      BENCHMARK_REF: ${{ inputs.benchmark_ref || github.event.client_payload.benchmark_ref || 'main' }}
+      CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Checkout dashboard
+        uses: actions/checkout@v4
+        with:
+          path: dashboard
+
+      - name: Checkout benchmark data
+        uses: actions/checkout@v4
+        with:
+          repository: Dongbox/optagent-benckmarks
+          ref: ${{ env.BENCHMARK_REF }}
+          path: optagent-benchmarks
+          token: ${{ secrets.OPTAGENT_BENCHMARKS_READ_TOKEN || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Sync benchmark JSON
+        run: |
+          rm -rf dashboard/public/data/results dashboard/public/data/aggregates
+          mkdir -p dashboard/public/data
+          cp -R optagent-benchmarks/results dashboard/public/data/results
+          cp -R optagent-benchmarks/aggregates dashboard/public/data/aggregates
+
+      - name: Install dashboard dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Build dashboard
+        working-directory: dashboard
+        run: npm run build
+
+      - name: Validate Cloudflare Pages configuration
+        run: |
+          if [ -z "${CLOUDFLARE_PAGES_PROJECT}" ]; then
+            echo "CLOUDFLARE_PAGES_PROJECT is not configured in GitHub Actions variables." >&2
+            exit 1
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID}" ]; then
+            echo "CLOUDFLARE_ACCOUNT_ID is not configured in GitHub Actions secrets." >&2
+            exit 1
+          fi
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "CLOUDFLARE_API_TOKEN is not configured in GitHub Actions secrets." >&2
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: >-
+          npx wrangler@3 pages deploy dashboard/dist
+          --project-name="${CLOUDFLARE_PAGES_PROJECT}"
+          --branch="${GITHUB_REF_NAME}"
