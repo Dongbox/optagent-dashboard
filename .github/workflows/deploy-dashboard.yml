@@ -6,7 +6,7 @@ on:
       benchmark_ref:
         description: optagent-benchmarks ref to sync
         required: false
-        default: main
+        default: cpp-python-boundary-redesign
   repository_dispatch:
     types:
       - benchmark-results-updated
@@ -24,18 +24,18 @@ jobs:
     name: Build And Deploy Dashboard
     runs-on: ubuntu-latest
     env:
-      BENCHMARK_REF: ${{ inputs.benchmark_ref || github.event.client_payload.benchmark_ref || 'main' }}
+      BENCHMARK_REF: ${{ inputs.benchmark_ref || github.event.client_payload.benchmark_ref || 'cpp-python-boundary-redesign' }}
       CLOUDFLARE_PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - name: Checkout dashboard
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: dashboard
 
       - name: Checkout benchmark data
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Dongbox/optagent-benckmarks
           ref: ${{ env.BENCHMARK_REF }}
@@ -43,9 +43,9 @@ jobs:
           token: ${{ secrets.OPTAGENT_BENCHMARKS_READ_TOKEN || github.token }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: dashboard/package-lock.json
 
