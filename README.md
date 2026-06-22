@@ -132,3 +132,46 @@ Required GitHub configuration:
 - Secret `CLOUDFLARE_ACCOUNT_ID`
 - Secret `CLOUDFLARE_API_TOKEN`
 - Optional secret `OPTAGENT_BENCHMARKS_READ_TOKEN` when benchmark checkout needs a token beyond `GITHUB_TOKEN`
+
+## Cloudflare Pages First-Time Setup
+
+Use a Cloudflare Pages **Direct Upload** project. Do not connect this repository through the Cloudflare Git integration if GitHub Actions should control the deploy.
+
+Cloudflare setup:
+
+1. Open Cloudflare dashboard.
+2. Go to `Workers & Pages`.
+3. Create an application.
+4. Choose `Pages`.
+5. Choose `Direct Upload`.
+6. Create a project, for example `optagent-dashboard`.
+7. Copy the Cloudflare `Account ID`.
+8. Create an API token with `Cloudflare Pages: Edit` permission for the account.
+
+GitHub setup for `optagent-dashboard`:
+
+- Action variable `CLOUDFLARE_PAGES_PROJECT`: the Pages project name, for example `optagent-dashboard`.
+- Action secret `CLOUDFLARE_ACCOUNT_ID`: Cloudflare Account ID.
+- Action secret `CLOUDFLARE_API_TOKEN`: API token with Pages edit permission.
+- Optional action secret `OPTAGENT_BENCHMARKS_READ_TOKEN`: only needed when benchmark data checkout cannot use the default token.
+
+Manual deploy:
+
+```bash
+gh workflow run deploy-dashboard.yml \
+  --repo Dongbox/optagent-dashboard \
+  --ref main \
+  -f benchmark_ref=main
+```
+
+Expected automated flow:
+
+```text
+optagent workflow_dispatch or benchmark-dashboard-ci push
+  -> dispatch optagent-benchmarks/.github/workflows/run-benchmarks.yml
+  -> benchmark rows are published into optagent-benchmarks/results and aggregates
+  -> optagent-benchmarks dispatches optagent-dashboard deploy-dashboard.yml
+  -> dashboard copies benchmark JSON, builds Vite, and uploads dist/ to Cloudflare Pages
+```
+
+Until Cloudflare Pages is configured, the deploy workflow will fail at the configuration validation step. Local development still works with `npm run dev`.
