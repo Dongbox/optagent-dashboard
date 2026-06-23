@@ -52,6 +52,7 @@ jobs:
       - name: Sync benchmark JSON
         run: |
           rm -rf dashboard/public/data/results dashboard/public/data/aggregates
+          rm -f dashboard/public/data/LOCAL_DEV_DATA.md
           mkdir -p dashboard/public/data
           cp -R optagent-benchmarks/results dashboard/public/data/results
           cp -R optagent-benchmarks/aggregates dashboard/public/data/aggregates

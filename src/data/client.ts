@@ -62,14 +62,16 @@ export async function loadRuntimeQuality(): Promise<RuntimeQualityData> {
 }
 
 export async function loadLocalDataNotice(): Promise<string | null> {
-  const response = await fetch(`${DATA_ROOT}/LOCAL_DEV_DATA.md`);
+  const markerPath = `${DATA_ROOT}/LOCAL_DEV_DATA.md`;
+  const response = await fetch(`${markerPath}?t=${Date.now()}`, { cache: 'no-store' });
   if (response.status === 404) {
     return null;
   }
   if (!response.ok) {
-    throw new Error(`Failed to load ${DATA_ROOT}/LOCAL_DEV_DATA.md: ${response.status}`);
+    throw new Error(`Failed to load ${markerPath}: ${response.status}`);
   }
-  return response.text();
+  const notice = await response.text();
+  return notice.includes('scripts/sync_dashboard_local_data.py') ? notice : null;
 }
 
 export async function loadRun(runPath: string): Promise<BenchmarkRun> {
