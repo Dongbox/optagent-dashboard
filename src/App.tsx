@@ -48,6 +48,9 @@ import type {
 
 type View = 'benchmarks' | 'strategies' | 'commits' | 'runs';
 
+const DISPLAY_TIME_ZONE = 'Asia/Shanghai';
+const DISPLAY_TIME_ZONE_LABEL = 'UTC+8';
+
 interface DashboardData {
   index: ResultsIndex;
   leaderboard: LeaderboardData;
@@ -167,8 +170,8 @@ function initialView(): View {
 function DataStamp({ generatedAt }: { generatedAt: string }) {
   return (
     <div className="data-stamp">
-      <span>生成时间</span>
-      <strong>{generatedAt}</strong>
+      <span>生成时间 {DISPLAY_TIME_ZONE_LABEL}</span>
+      <strong>{formatDateTime(generatedAt)}</strong>
     </div>
   );
 }
@@ -427,7 +430,7 @@ function CommitPage({
                 <td><Status ok={point.feasible} label={statusLabel(point.status)} /></td>
                 <td>{formatNumber(point.best_cost)}</td>
                 <td>{formatNumber(point.runtime_ms, 1)} ms</td>
-                <td>{point.created_at}</td>
+                <td>{formatDateTime(point.created_at)}</td>
                 <td>
                   <button
                     className="link-button"
@@ -617,6 +620,8 @@ function RunSummary({ run }: { run: BenchmarkRun }) {
           <dd>{run.optagent.wheel_sha256}</dd>
           <dt>Benchmark 仓库</dt>
           <dd><a href={run.benchmarks.commit_url} target="_blank" rel="noreferrer">{shortCommit(run.benchmarks.commit)}</a></dd>
+          <dt>创建时间</dt>
+          <dd>{formatDateTime(run.created_at)}</dd>
           <dt>评测 case</dt>
           <dd>{run.benchmark_group} / {run.benchmark_id}</dd>
           <dt>策略配置档</dt>
@@ -799,6 +804,27 @@ function booleanLabel(value: unknown): string {
     return '否';
   }
   return '未知';
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) {
+    return 'n/a';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  const formatted = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: DISPLAY_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(date).replace(/\//g, '-');
+  return `${formatted} ${DISPLAY_TIME_ZONE_LABEL}`;
 }
 
 function DenseTable({ columns, rows }: { columns: string[]; rows: Array<Array<React.ReactNode>> }) {
